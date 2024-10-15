@@ -1,118 +1,90 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useState } from 'react';
+import { View, ScrollView, Text } from 'react-native';
+import { PanGestureHandler, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Navbar from './src/components/Navbar';
+import HariNavigation from './src/components/HariNavigation';
+import JadwalCard from './src/components/JadwalCard';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+type Jadwal = {
+  jam: string;
+  ruangan: string;
+  kelas: string;
+};
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+type JadwalData = {
+  [key: string]: Jadwal[];
+};
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const MainScreen: React.FC = () => {
+  const [selectedDay, setSelectedDay] = useState<string>('Senin');
+  const [startX, setStartX] = useState<number>(0); // Menyimpan posisi awal swipe
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const jadwal: JadwalData = {
+    Senin: [
+      { jam: '08:00 - 09:00', ruangan: '101', kelas: 'XII IPA 1' },
+      { jam: '09:00 - 10:00', ruangan: '102', kelas: 'XII IPA 2' },
+    ],
+    Selasa: [
+      { jam: '08:00 - 09:00', ruangan: '103', kelas: 'XI IPA 1' },
+    ],
+    Rabu: [
+      { jam: '10:00 - 11:00', ruangan: '104', kelas: 'X IPA 2' },
+    ],
+    Kamis: [
+      { jam: '11:00 - 12:00', ruangan: '105', kelas: 'XII IPS 1' },
+    ],
+    Jumat: [
+      { jam: '13:00 - 14:00', ruangan: '106', kelas: 'XII IPS 2' },
+    ],
+  };
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const handleSwipe = (direction: string) => {
+    const currentIndex = days.indexOf(selectedDay);
+    if (direction === 'left' && currentIndex < days.length - 1) {
+      setSelectedDay(days[currentIndex + 1]);
+    } else if (direction === 'right' && currentIndex > 0) {
+      setSelectedDay(days[currentIndex - 1]);
+    }
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Navbar />
+      <HariNavigation selectedDay={selectedDay} onSelect={setSelectedDay} />
+      <PanGestureHandler
+        onGestureEvent={(e) => {
+          const threshold = 25; // Ambang batas geseran 50px untuk swipe yang lebih halus
+          const translationX = e.nativeEvent.translationX;
+
+          // Mendeteksi swipe awal dan menyimpan posisi awal
+          if (e.nativeEvent.state === 2 /* BEGAN */) {
+            setStartX(translationX);
+          }
+
+          // Membandingkan posisi awal dengan posisi akhir dan memastikan geseran cukup besar
+          if (e.nativeEvent.state === 4 /* ACTIVE */) {
+            const deltaX = startX - translationX;
+            if (deltaX > threshold) {
+              handleSwipe('left');
+              setStartX(translationX); // Reset posisi awal agar swipe lebih akurat
+            } else if (deltaX < -threshold) {
+              handleSwipe('right');
+              setStartX(translationX); // Reset posisi awal agar swipe lebih akurat
+            }
+          }
+        }}
+      >
+        <ScrollView className="flex-1 p-4">
+          {jadwal[selectedDay]?.map((item, index) => (
+            <JadwalCard key={index} jam={item.jam} ruangan={item.ruangan} kelas={item.kelas} />
+          ))}
+          <Text className="text-center mt-4">Geser untuk melihat jadwal hari lain</Text>
+        </ScrollView>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;
+export default MainScreen;
